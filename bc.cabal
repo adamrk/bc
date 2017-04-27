@@ -1,0 +1,20 @@
+name:                bc
+version:             0.1.0.0
+synopsis:            A better calculator
+description:         Like bc, but with a better prompt.
+license:             MIT
+license-file:        LICENSE
+author:              Veit Heller
+maintainer:          veit@veitheller.de
+copyright:           
+category:            Language
+build-type:          Simple
+extra-source-files:  ChangeLog.md, README.md
+cabal-version:       >=1.10
+
+executable bc
+  main-is:             Main.hs
+  other-modules:       
+  build-depends:       base >=4.9 && <4.10
+  hs-source-dirs:      src
+  default-language:    Haskell2010
