@@ -1,45 +1,60 @@
 module BC.Prompt (startPrompt) where
 
-import System.Console.Haskeline
+import Data.Char
+import System.IO
 import System.Posix.Signals
 
 import BC.Config
 
 printHeader :: IO ()
 printHeader = do
-  putStrLn $ "bc (better calculator) version " ++ versionStr
-  putStrLn "Copyright 2017 Veit Heller"
-  putStrLn "This is free software with ABSOLUTELY NO WARRANTY.\n"
+    putStrLn $ "bc (better calculator) version " ++ versionStr
+    putStrLn "Copyright 2017 Veit Heller"
+    putStrLn "This is free software with ABSOLUTELY NO WARRANTY.\n"
 
 
-output :: [Char] -> InputT IO ()
-output out = outputStrLn $ returnStr ++ out
+output :: String -> IO ()
+output out = putStrLn $ returnStr ++ out
+
+
+readline :: IO (Maybe String)
+readline = do
+    putStr promptStr
+    hFlush stdout
+    read' ""
+  where read' acc = do
+          c <- getChar
+          case c of
+            '\EOT' -> return Nothing
+            '\n' -> return (Just acc)
+            c    -> read' (acc ++ [c])
 
 
 prompt :: IO ()
-prompt = runInputT defaultSettings $ poll promptStr
-  where poll p = do
-          input <- getInputLine p
-          case input of
-            Nothing -> do
-              output "Bye!"
-              return ()
-            Just "quit" -> do
-              output "Bye!"
-              return ()
-            Just str -> do
-              output str
-              poll p
+prompt = do
+    input <- readline
+    case input of
+      Nothing -> do
+        output "Bye!"
+        return ()
+      Just "quit" -> do
+        output "Bye!"
+        return ()
+      Just str -> do
+        output str
+        prompt
 
 
 installHandlers :: IO ()
 installHandlers = do
-  installHandler keyboardSignal (Catch (putStrLn "\n(interrupt) type quit to exit")) Nothing
-  return ()
+    installHandler keyboardSignal (Catch (putStrLn "\n(interrupt) type quit to exit")) Nothing
+    hSetBuffering stdout NoBuffering
+    hSetBuffering stdin NoBuffering
+    return ()
 
 
 startPrompt :: IO ()
 startPrompt = do
-  printHeader
-  installHandlers
-  prompt
+    printHeader
+    installHandlers
+    prompt
