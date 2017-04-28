@@ -11,3 +11,11 @@ instance Show Value where
 isErr :: Value -> Bool
 isErr (BErr _) = True
 isErr _        = False
+
+precedence :: Value -> Int
+precedence (BOp "^") = 1
+precedence (BOp "*") = 2
+precedence (BOp "/") = 2
+precedence (BOp "-") = 1
+precedence (BOp "+") = 1
+precedence _         = 0
