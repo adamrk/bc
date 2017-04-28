@@ -1,5 +1,7 @@
-module Bc.Prompt where
+module BC.Config where
 
 versionStr = "0.1.0.0"
 
-prompt = "> "
+promptStr = "> "
+
+returnStr = "=> "
