@@ -5,6 +5,9 @@ import System.IO
 import System.Posix.Signals
 
 import BC.Config
+import BC.Eval
+import BC.Parse
+import BC.Types
 
 printHeader :: IO ()
 printHeader = do
@@ -14,33 +17,45 @@ printHeader = do
 
 
 output :: String -> IO ()
-output out = putStrLn $ returnStr ++ out
+output out =
+    let res = parse out
+    in if length res == 1 && isErr (res !! 0)
+      then putStrLn $ show (res !! 0)
+      else putStrLn $ returnStr ++ show (eval res)
 
 
 readline :: IO (Maybe String)
 readline = do
     putStr promptStr
-    hFlush stdout
     read' ""
   where read' acc = do
           c <- getChar
           case c of
             '\EOT' -> return Nothing
             '\n' -> return (Just acc)
-            c    -> read' (acc ++ [c])
+            '\DEL' ->
+              if length acc > 0
+              then do
+                putStr "\b \b"
+                read' (init acc)
+              else do
+                read' acc
+            c    ->
+              if isPrint c
+                then do
+                  putStr [c]
+                  read' (acc ++ [c])
+                else read' acc
 
 
 prompt :: IO ()
 prompt = do
     input <- readline
     case input of
-      Nothing -> do
-        output "Bye!"
-        return ()
-      Just "quit" -> do
-        output "Bye!"
-        return ()
+      Nothing -> putStrLn "Bye!"
+      Just "quit" -> putStrLn "Bye!"
       Just str -> do
+        putStrLn ""
         output str
         prompt
 
@@ -49,8 +64,8 @@ installHandlers :: IO ()
 installHandlers = do
     installHandler keyboardSignal (Catch (putStrLn "\n(interrupt) type quit to exit")) Nothing
     hSetBuffering stdout NoBuffering
+    hSetEcho stdin False
     hSetBuffering stdin NoBuffering
-    return ()
 
 
 startPrompt :: IO ()
