@@ -22,6 +22,7 @@ treeEval (x@(BOp _):xy) [] nums = treeEval xy [x] nums
 handleOp :: [Value] -> [Value] -> [Value] -> Value
 handleOp expr (op:ops) (op1:(op2:nums)) =
     treeEval expr ops ((evalOp op op1 op2):nums)
+handleOp expr ((BOp op):ops) _ = BErr ("Not enough arguments to operation " ++ op)
 
 evalOp :: Value -> Value -> Value -> Value
 evalOp (BOp "*") (BInt x) (BInt y) = BInt $ x * y

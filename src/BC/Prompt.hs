@@ -24,11 +24,28 @@ output out =
       else putStrLn $ returnStr ++ show (eval res)
 
 
+printStatus :: String -> IO ()
+printStatus str =
+    let res = parse str
+    in if length res == 1 && isErr (res !! 0)
+      then return ()
+      else
+        let evald = eval res
+            out = show evald
+        in if isErr evald || length out == 0
+          then return ()
+          else let str = " \x1b[33m=> " ++ out ++ "\x1b[0m"
+               in putStr (str ++ repeat '\b' (length str - 9))
+  where repeat str 0 = ""
+        repeat str n = (str:repeat str (n-1))
+
+
 readline :: IO (Maybe String)
 readline = do
     putStr promptStr
     read' ""
   where read' acc = do
+          printStatus acc
           c <- getChar
           case c of
             '\EOT' -> return Nothing
@@ -52,8 +69,8 @@ prompt :: IO ()
 prompt = do
     input <- readline
     case input of
-      Nothing -> putStrLn "Bye!"
-      Just "quit" -> putStrLn "Bye!"
+      Nothing -> putStrLn "\nBye!"
+      Just "quit" -> putStrLn "\nBye!"
       Just str -> do
         putStrLn ""
         output str
