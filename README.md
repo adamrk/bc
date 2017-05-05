@@ -3,11 +3,13 @@
 A better basic calculator. Like the original `bc`, but with a better
 prompt. Work in progress. Very incapable right now.
 
+[![asciicast](https://asciinema.org/a/75ay3m4mx5i93tbfu7dahc55u.png)](https://asciinema.org/a/75ay3m4mx5i93tbfu7dahc55u)
+
 ## What?
 
 The idea behind `bc` is to display partial results to the right of the
 cursor in yellow while we type. A little example can be found in the video
-below. Other than that, we want to be compatible with the original `bc`, though
+above. Other than that, we want to be compatible with the original `bc`, though
 somewhat faster. We have infinite precision integers and double precision floats.
 
 ## TODO
