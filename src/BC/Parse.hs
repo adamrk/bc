@@ -1,5 +1,7 @@
 module BC.Parse (parse) where
 
+import Data.Char
+
 import qualified Text.ParserCombinators.Parsec as P
 
 import BC.Types
@@ -7,9 +9,25 @@ import BC.Types
 symbol :: P.Parser Char
 symbol = P.oneOf "!%&|*+-/<=>^~"
 
+
 number :: P.Parser Value
-number = do
-    neg <- P.optionMaybe (P.string "-" P.<|> P.string "+")
+number = P.try float P.<|> integer
+
+
+float :: P.Parser Value
+float = do
+    neg <- P.optionMaybe (P.string "-")
+    x <- P.many1 P.digit
+    _ <- P.string "."
+    y <- P.many1 P.digit
+    case neg of
+      Just "-" -> (return . BFloat . read) ("-" ++ x ++ "." ++ y)
+      _        -> (return . BFloat . read) (x ++ "." ++ y)
+
+
+integer :: P.Parser Value
+integer = do
+    neg <- P.optionMaybe (P.string "-")
     x <- P.many1 P.digit
     case neg of
       Just "-" -> (return . BInt . read) ("-" ++ x)
@@ -24,6 +42,12 @@ parser :: P.Parser [Value]
 parser = (P.sepBy (P.try operator P.<|> number) P.spaces) <* P.eof
 
 parse :: String -> [Value]
-parse input = case P.parse parser input input of
+parse input = case P.parse parser (trim input) (trim input) of
     Left err  -> [BErr $ show err]
     Right val -> val
+  where trim s = trimR "" $ dropWhile isSpace s
+        trimR s "" = ""
+        trimR s (x:xs)
+          | isSpace x = trimR (x:s) xs
+          | null s    = x:trimR "" xs
+          | otherwise = reverse s ++ x:trimR "" xs
