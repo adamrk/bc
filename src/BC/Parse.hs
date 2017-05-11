@@ -21,8 +21,8 @@ float = do
     _ <- P.string "."
     y <- P.many1 P.digit
     case neg of
-      Just "-" -> (return . BFloat . read) ("-" ++ x ++ "." ++ y)
-      _        -> (return . BFloat . read) (x ++ "." ++ y)
+      Just "-" -> (return . BNum . BFloat . read) ("-" ++ x ++ "." ++ y)
+      _        -> (return . BNum . BFloat . read) (x ++ "." ++ y)
 
 
 integer :: P.Parser Value
@@ -30,8 +30,8 @@ integer = do
     neg <- P.optionMaybe (P.string "-")
     x <- P.many1 P.digit
     case neg of
-      Just "-" -> (return . BInt . read) ("-" ++ x)
-      _        -> (return . BInt . read) x
+      Just "-" -> (return . BNum . BInt . read) ("-" ++ x)
+      _        -> (return . BNum . BInt . read) x
 
 
 bool :: P.Parser Value
