@@ -19,5 +19,4 @@ Basically everything except calculating stuff with numbers. This includes:
 - A parser (foundations are laid)
 - An evaluator (the current just does a tree rewrite on binary operations; this is
   cute, but not capable enough for the full `bc` language, of course)
-- A better data structure (numbers should probably have their own parent type to implement calculation)
 - A good readline copy (haskeline is sadly out of the question for this project)
