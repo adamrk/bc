@@ -2,11 +2,13 @@ module BC.Types where
 
 data Value = BInt Integer
            | BFloat Double
+           | BBool Bool
            | BOp String
            | BErr String
 instance Show Value where
   show (BInt i) = show i
   show (BFloat f) = show f
+  show (BBool b) = if b then "true" else "false"
   show (BOp  o) = o
   show (BErr e) = "error: " ++ e
 

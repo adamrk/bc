@@ -33,13 +33,29 @@ integer = do
       Just "-" -> (return . BInt . read) ("-" ++ x)
       _        -> (return . BInt . read) x
 
+
+bool :: P.Parser Value
+bool = P.try parseTrue P.<|> parseFalse
+    where parseTrue = do
+            _ <- P.string "true"
+            return $ BBool True
+          parseFalse = do
+            _ <- P.string "false"
+            return $ BBool False
+
+
 operator :: P.Parser Value
 operator = do
     res <- P.many1 $ P.letter P.<|> symbol
     return $ BOp res
 
+
+types :: P.Parser Value
+types = P.try bool P.<|> P.try operator P.<|> number
+
+
 parser :: P.Parser [Value]
-parser = (P.sepBy (P.try operator P.<|> number) P.spaces) <* P.eof
+parser = (P.sepBy types P.spaces) <* P.eof
 
 parse :: String -> [Value]
 parse input = case P.parse parser (trim input) (trim input) of

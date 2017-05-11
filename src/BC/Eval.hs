@@ -5,6 +5,7 @@ import BC.Types
 eval :: [Value] -> Value
 eval [x@(BInt _)] = x
 eval [x@(BFloat _)] = x
+eval [x@(BBool _)] = x
 eval [x@(BErr _)] = x
 eval [(BOp x)] = BErr ("operation " ++ x ++ " requires arguments")
 eval [] = BOp ""
@@ -15,6 +16,8 @@ treeEval [] [] (num:_) = num
 treeEval [] ops nums = handleOp [] ops nums
 treeEval (x@(BInt _):xy) ops nums = treeEval xy ops (x:nums)
 treeEval (x@(BFloat _):xy) ops nums = treeEval xy ops (x:nums)
+treeEval ((BBool x):xy) ops nums =
+    treeEval xy ops ((BInt $ if x then 1 else 0):nums)
 treeEval expr@(x@(BOp _):xy) ops@(op:_) nums =
     if precedence x > precedence op
       then treeEval xy (x:ops) nums
