@@ -7,6 +7,7 @@ import System.Posix.Signals
 import BC.Config
 import BC.Eval
 import BC.Parse
+import BC.State
 import BC.Types
 
 printHeader :: IO ()
@@ -16,21 +17,26 @@ printHeader = do
     putStrLn "This is free software with ABSOLUTELY NO WARRANTY.\n"
 
 
-output :: String -> IO ()
-output out =
+output :: State -> String -> IO State
+output state out =
     let res = parse out
     in if length res == 1 && isErr (res !! 0)
-      then putStrLn $ show (res !! 0)
-      else putStrLn $ returnStr ++ show (eval res)
+      then do
+        putStrLn $ show (res !! 0)
+        return $ state
+      else
+        let (ret, newstate) = eval state res
+        in do putStrLn $ returnStr ++ show ret
+              return newstate
 
 
-printStatus :: String -> IO ()
-printStatus str =
+printStatus :: State -> String -> IO ()
+printStatus state str =
     let res = parse str
     in if length res == 1 && isErr (res !! 0)
       then return ()
       else
-        let evald = eval res
+        let (evald, _) = eval state res
             out = show evald
         in if isErr evald || length out == 0
           then return ()
@@ -53,13 +59,13 @@ readSpecialKey = do
     return ()
 
 
-readline :: IO (Maybe String)
-readline = read' ""
+readline :: State -> IO (Maybe String)
+readline state = read' ""
   where read' acc = do
           cleanPrompt
           putStr promptStr
           putStr acc
-          printStatus acc
+          printStatus state acc
           c <- getChar
           case c of
             '\EOT' -> return Nothing
@@ -82,16 +88,16 @@ readline = read' ""
                 else read' acc
 
 
-prompt :: IO ()
-prompt = do
-    input <- readline
+prompt :: State -> IO ()
+prompt state = do
+    input <- readline state
     case input of
       Nothing -> putStrLn "\nBye!"
       Just "quit" -> putStrLn "\nBye!"
       Just str -> do
         putStrLn ""
-        output str
-        prompt
+        newstate <- output state str
+        prompt newstate
 
 
 installHandlers :: IO ()
@@ -106,4 +112,4 @@ startPrompt :: IO ()
 startPrompt = do
     printHeader
     installHandlers
-    prompt
+    prompt newState

@@ -6,8 +6,8 @@ import qualified Text.ParserCombinators.Parsec as P
 
 import BC.Types
 
-symbol :: P.Parser Char
-symbol = P.oneOf "!%&|*+-/<=>^~"
+symchar :: P.Parser Char
+symchar = P.oneOf "!%&|*+-/<=>^~"
 
 
 number :: P.Parser Value
@@ -44,45 +44,58 @@ bool = P.try parseTrue P.<|> parseFalse
             return $ BBool False
 
 
-operator :: P.Parser Value
-operator = do
-    res <- P.many1 $ P.letter P.<|> symbol
-    return $ BOp res
+symbol :: P.Parser Value
+symbol = do
+    res <- P.many1 $ P.letter P.<|> symchar
+    return $ BSym res
 
 
 -- I obviously can't parsec
 parseIf :: P.Parser Value
 parseIf = do
-      _ <- P.string "if"
-      _ <- P.optionMaybe P.spaces
-      _ <- P.string "("
-      _ <- P.optionMaybe P.spaces
-      cond <- P.sepBy expr P.spaces
-      _ <- P.optionMaybe P.spaces
-      _ <- P.string ")"
-      _ <- P.optionMaybe P.spaces
-      _ <- P.string "{"
-      _ <- P.optionMaybe P.spaces
-      body <- P.sepBy expr P.spaces
-      _ <- P.optionMaybe P.spaces
-      _ <- P.string "}"
-      _ <- P.optionMaybe P.spaces
-      alt <- P.optionMaybe (P.string "else")
-      case alt of
-        Just _ -> do
-          _ <- P.optionMaybe P.spaces
-          _ <- P.string "{"
-          _ <- P.optionMaybe P.spaces
-          altbody <- P.sepBy expr P.spaces
-          _ <- P.optionMaybe P.spaces
-          _ <- P.string "}"
-          return $ BIf cond body (Just altbody)
-        Nothing -> return $ BIf cond body Nothing
+    _ <- P.string "if"
+    _ <- P.optionMaybe P.spaces
+    _ <- P.string "("
+    _ <- P.optionMaybe P.spaces
+    cond <- P.sepBy expr P.spaces
+    _ <- P.optionMaybe P.spaces
+    _ <- P.string ")"
+    _ <- P.optionMaybe P.spaces
+    _ <- P.string "{"
+    _ <- P.optionMaybe P.spaces
+    body <- P.sepBy expr P.spaces
+    _ <- P.optionMaybe P.spaces
+    _ <- P.string "}"
+    _ <- P.optionMaybe P.spaces
+    alt <- P.optionMaybe (P.string "else")
+    case alt of
+      Just _ -> do
+        _ <- P.optionMaybe P.spaces
+        _ <- P.string "{"
+        _ <- P.optionMaybe P.spaces
+        altbody <- P.sepBy expr P.spaces
+        _ <- P.optionMaybe P.spaces
+        _ <- P.string "}"
+        return $ BIf cond body (Just altbody)
+      Nothing -> return $ BIf cond body Nothing
 
+
+def :: P.Parser Value
+def = do
+    sym <- symbol
+    _ <- P.spaces
+    _ <- P.string "="
+    _ <- P.optionMaybe P.spaces
+    expr <- P.sepBy expr P.spaces
+    return $ BDef sym expr
 
 
 expr :: P.Parser Value
-expr = P.try bool P.<|> P.try parseIf P.<|> P.try number P.<|> operator
+expr = P.try bool
+ P.<|> P.try def
+ P.<|> P.try parseIf
+ P.<|> P.try number
+ P.<|> symbol
 
 
 parser :: P.Parser [Value]

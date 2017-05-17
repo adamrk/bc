@@ -1,5 +1,8 @@
 module BC.Eval (eval) where
 
+import qualified Data.HashMap as M
+
+import BC.State
 import BC.Types
 
 truthy :: Value -> Bool
@@ -8,37 +11,55 @@ truthy (BBool x) = x
 truthy _ = False
 
 
-eval :: [Value] -> Value
-eval [x@(BNum _)] = x
-eval [x@(BBool _)] = x
-eval [x@(BErr _)] = x
-eval [x@(BIf cond body alt)] =
-  if truthy (eval cond)
-    then eval body
-    else case alt of
-          Just vals -> eval vals
-          Nothing -> BBool False
-eval [(BOp x)] = BErr ("operation " ++ x ++ " requires arguments")
-eval [] = BOp ""
-eval l = treeEval l [] []
+eval :: State -> [Value] -> (Value, State)
+eval state [x@(BNum _)] = (x, state)
+eval state [(BDef (BSym sym) expr)] =
+    let (val, newstate) = eval state expr
+    in (val, M.insert sym val newstate)
+eval state [x@(BBool _)] = (x, state)
+eval state [x@(BErr _)] = (x, state)
+eval state [(BIf cond body alt)] =
+    let (evald, ifstate) = eval state cond
+    in
+      if truthy evald
+        then eval ifstate body
+        else case alt of
+              Just vals -> eval ifstate vals
+              Nothing -> (BBool False, ifstate)
+eval state [(BSym x)] =
+    case M.lookup x state of
+      Just val -> (val, state)
+      Nothing  -> (BErr (x ++ " is undefined"), state)
+eval state [] = (BSym "", state)
+eval state l = (treeEval state l [] [], state)
 
-treeEval :: [Value] -> [Value] -> [Value] -> Value
-treeEval [] [] (num:_) = num
-treeEval [] ops nums = handleOp [] ops nums
-treeEval (x@(BIf _ _ _):xy) ops nums = treeEval (eval [x]:xy) ops nums
-treeEval (x@(BNum _):xy) ops nums = treeEval xy ops (x:nums)
-treeEval ((BBool x):xy) ops nums =
-    treeEval xy ops ((BNum $ BInt $ if x then 1 else 0):nums)
-treeEval expr@(x@(BOp _):xy) ops@(op:_) nums =
-    if precedence x > precedence op
-      then treeEval xy (x:ops) nums
-      else handleOp expr ops nums
-treeEval (x@(BOp _):xy) [] nums = treeEval xy [x] nums
 
-handleOp :: [Value] -> [Value] -> [Value] -> Value
-handleOp expr (op:ops) ((BNum op2):((BNum op1):nums)) =
-    treeEval expr ops (((findOp op) op1 op2):nums)
-handleOp expr ((BOp op):ops) _ = BErr ("Not enough arguments to operation " ++ op)
+treeEval :: State -> [Value] -> [Value] -> [Value] -> Value
+treeEval _ [] [] (num:_) = num
+treeEval state [] ops nums = handleOp state [] ops nums
+treeEval state (x@(BIf _ _ _):xy) ops nums =
+    let (val, newstate) = eval state [x]
+    in treeEval newstate (val:xy) ops nums
+treeEval state (x@(BNum _):xy) ops nums = treeEval state xy ops (x:nums)
+treeEval state ((BBool x):xy) ops nums =
+    treeEval state xy ops ((BNum $ BInt $ if x then 1 else 0):nums)
+treeEval state expr@(x@(BSym sym):xy) ops@(op:_) nums =
+    case M.lookup sym state of
+      Just val -> treeEval state xy ops (val:nums)
+      Nothing  ->
+        if precedence x > precedence op
+          then treeEval state xy (x:ops) nums
+          else handleOp state expr ops nums
+treeEval state (x@(BSym sym):xy) [] nums =
+    case M.lookup sym state of
+      Just val -> treeEval state xy [] (val:nums)
+      Nothing  -> treeEval state xy [x] nums
+
+
+handleOp :: State -> [Value] -> [Value] -> [Value] -> Value
+handleOp state expr (op:ops) ((BNum op2):((BNum op1):nums)) =
+    treeEval state expr ops (((findOp op) op1 op2):nums)
+handleOp _ expr ((BSym op):ops) _ = BErr ("Not enough arguments to operation " ++ op)
 
 
 findOp x = case binOp x of
@@ -50,19 +71,19 @@ findOp x = case binOp x of
 
 
 logicalOp :: Value -> Maybe (Number -> Number -> Bool)
-logicalOp (BOp ">") = Just (>)
-logicalOp (BOp "<") = Just (<)
-logicalOp (BOp ">=") = Just (>=)
-logicalOp (BOp "<=") = Just (<=)
-logicalOp (BOp "==") = Just (==)
-logicalOp (BOp "!=") = Just (/=)
+logicalOp (BSym ">") = Just (>)
+logicalOp (BSym "<") = Just (<)
+logicalOp (BSym ">=") = Just (>=)
+logicalOp (BSym "<=") = Just (<=)
+logicalOp (BSym "==") = Just (==)
+logicalOp (BSym "!=") = Just (/=)
 logicalOp _ = Nothing
 
 
 binOp :: Value -> Maybe (Number -> Number -> Number)
-binOp (BOp "*") = Just (*)
-binOp (BOp "/") = Just (/)
-binOp (BOp "+") = Just (+)
-binOp (BOp "-") = Just ( - )
-binOp (BOp "^") = Just (**)
+binOp (BSym "*") = Just (*)
+binOp (BSym "/") = Just (/)
+binOp (BSym "+") = Just (+)
+binOp (BSym "-") = Just ( - )
+binOp (BSym "^") = Just (**)
 binOp _ = Nothing

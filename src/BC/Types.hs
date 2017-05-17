@@ -4,11 +4,13 @@ import Data.List (intercalate)
 
 data Value = BNum Number
            | BBool Bool
-           | BOp String
+           | BSym String
            | BIf [Value] [Value] (Maybe [Value])
+           | BDef Value [Value]
            | BErr String
 instance Show Value where
   show (BBool b) = if b then "true" else "false"
+  show (BDef sym expr) = show sym ++ " = " ++ unwords (map show expr)
   show (BIf x y z) =
     "if (" ++ unwords (map show x) ++ ") {\n\t" ++
     intercalate "\n\t" (map show y) ++ "\n}" ++
@@ -16,7 +18,7 @@ instance Show Value where
         Just vals ->
           " else {\n\t" ++ intercalate "\n\t" (map show vals) ++ "\n}"
         Nothing -> "")
-  show (BOp  o) = o
+  show (BSym  o) = o
   show (BNum n) = show n
   show (BErr e) = "error: " ++ e
 
@@ -69,18 +71,18 @@ isErr _        = False
 
 
 precedence :: Value -> Int
-precedence (BOp "^") = 5
-precedence (BOp "*") = 4
-precedence (BOp "/") = 4
-precedence (BOp "-") = 3
-precedence (BOp "+") = 3
-precedence (BOp "%") = 4
-precedence (BOp "||") = 1
-precedence (BOp "&&") = 1
-precedence (BOp "<") = 2
-precedence (BOp ">") = 2
-precedence (BOp "<=") = 2
-precedence (BOp ">=") = 2
-precedence (BOp "==") = 2
-precedence (BOp "!=") = 2
+precedence (BSym "^") = 5
+precedence (BSym "*") = 4
+precedence (BSym "/") = 4
+precedence (BSym "-") = 3
+precedence (BSym "+") = 3
+precedence (BSym "%") = 4
+precedence (BSym "||") = 1
+precedence (BSym "&&") = 1
+precedence (BSym "<") = 2
+precedence (BSym ">") = 2
+precedence (BSym "<=") = 2
+precedence (BSym ">=") = 2
+precedence (BSym "==") = 2
+precedence (BSym "!=") = 2
 precedence _         = 0
