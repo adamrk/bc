@@ -14,9 +14,9 @@ somewhat faster. We have infinite precision integers and double precision floats
 
 ## TODO
 
-Basically everything except calculating stuff with numbers. This includes:
+Basically everything except numbers, variables, and `if`. This includes:
 
-- A parser (foundations are laid)
-- An evaluator (the current just does a tree rewrite on binary operations; this is
+- A complete parser (foundations are laid)
+- A better evaluator (the current just does a tree rewrite on binary operations; this is
   cute, but not capable enough for the full `bc` language, of course)
 - A good readline copy (haskeline is sadly out of the question for this project)
