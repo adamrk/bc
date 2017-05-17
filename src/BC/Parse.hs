@@ -50,12 +50,43 @@ operator = do
     return $ BOp res
 
 
-types :: P.Parser Value
-types = P.try bool P.<|> P.try operator P.<|> number
+-- I obviously can't parsec
+parseIf :: P.Parser Value
+parseIf = do
+      _ <- P.string "if"
+      _ <- P.optionMaybe P.spaces
+      _ <- P.string "("
+      _ <- P.optionMaybe P.spaces
+      cond <- P.sepBy expr P.spaces
+      _ <- P.optionMaybe P.spaces
+      _ <- P.string ")"
+      _ <- P.optionMaybe P.spaces
+      _ <- P.string "{"
+      _ <- P.optionMaybe P.spaces
+      body <- P.sepBy expr P.spaces
+      _ <- P.optionMaybe P.spaces
+      _ <- P.string "}"
+      _ <- P.optionMaybe P.spaces
+      alt <- P.optionMaybe (P.string "else")
+      case alt of
+        Just _ -> do
+          _ <- P.optionMaybe P.spaces
+          _ <- P.string "{"
+          _ <- P.optionMaybe P.spaces
+          altbody <- P.sepBy expr P.spaces
+          _ <- P.optionMaybe P.spaces
+          _ <- P.string "}"
+          return $ BIf cond body (Just altbody)
+        Nothing -> return $ BIf cond body Nothing
+
+
+
+expr :: P.Parser Value
+expr = P.try bool P.<|> P.try parseIf P.<|> P.try number P.<|> operator
 
 
 parser :: P.Parser [Value]
-parser = (P.sepBy types P.spaces) <* P.eof
+parser = (P.sepBy expr P.spaces) <* P.eof
 
 parse :: String -> [Value]
 parse input = case P.parse parser (trim input) (trim input) of

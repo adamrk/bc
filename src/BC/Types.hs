@@ -1,11 +1,21 @@
 module BC.Types where
 
+import Data.List (intercalate)
+
 data Value = BNum Number
            | BBool Bool
            | BOp String
+           | BIf [Value] [Value] (Maybe [Value])
            | BErr String
 instance Show Value where
   show (BBool b) = if b then "true" else "false"
+  show (BIf x y z) =
+    "if (" ++ unwords (map show x) ++ ") {\n\t" ++
+    intercalate "\n\t" (map show y) ++ "\n}" ++
+      (case z of
+        Just vals ->
+          " else {\n\t" ++ intercalate "\n\t" (map show vals) ++ "\n}"
+        Nothing -> "")
   show (BOp  o) = o
   show (BNum n) = show n
   show (BErr e) = "error: " ++ e
@@ -36,11 +46,11 @@ instance Floating Number where
     tanh x =  sinh x / cosh x
 
 instance Num Number where
-  (BInt x) + (BInt y) = BInt $ x * y
-  (BFloat x) + (BFloat y) = BFloat $ x * y
-  (BInt x) + (BFloat y) = BFloat $ fromIntegral x * y
-  (BFloat x) + (BInt y) = BFloat $ x * fromIntegral y
-  (BInt x) * (BInt y) = BInt $ x * y
+  (BInt x) + (BInt y) = BInt $ x + y
+  (BFloat x) + (BFloat y) = BFloat $ x + y
+  (BInt x) + (BFloat y) = BFloat $ fromIntegral x + y
+  (BFloat x) + (BInt y) = BFloat $ x + fromIntegral y
+  (BInt x) * (BInt y) = BInt $ x + y
   (BFloat x) * (BFloat y) = BFloat $ x * y
   (BInt x) * (BFloat y) = BFloat $ fromIntegral x * y
   (BFloat x) * (BInt y) = BFloat $ x * fromIntegral y
