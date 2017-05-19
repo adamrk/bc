@@ -22,7 +22,7 @@ commasep parser = P.sepBy parser sep
   where sep = do _ <- optspace
                  str <- P.string ","
                  _ <- optspace
-                 return $ str
+                 return str
 
 
 float :: P.Parser Value
@@ -70,26 +70,30 @@ block = do
     body <- P.sepBy parser newline
     _ <- optspace
     _ <- P.string "}"
-    return $ body
+    return body
   where newline = do
           _ <- P.many (P.string " " P.<|> P.string "\t")
           _ <- P.string "\n"
           P.many (P.string " " P.<|> P.string "\t")
 
 
--- I obviously can't parsec
-parseIf :: P.Parser Value
-parseIf = do
-    _ <- P.string "if"
+headAndBlock parser = do
     _ <- optspace
     _ <- P.string "("
     _ <- optspace
-    cond <- parser
+    args <- parser
     _ <- optspace
     _ <- P.string ")"
     _ <- optspace
     body <- block
     _ <- optspace
+    return (args, body)
+
+
+parseIf :: P.Parser Value
+parseIf = do
+    _ <- P.string "if"
+    (cond, body) <- headAndBlock parser
     alt <- P.optionMaybe (P.string "else")
     case alt of
       Just _ -> do
@@ -102,15 +106,7 @@ parseIf = do
 while :: P.Parser Value
 while = do
     _ <- P.string "while"
-    _ <- optspace
-    _ <- P.string "("
-    _ <- optspace
-    cond <- parser
-    _ <- optspace
-    _ <- P.string ")"
-    _ <- optspace
-    body <- block
-    _ <- optspace
+    (cond, body) <- headAndBlock parser
     return $ BWhile cond body
 
 
@@ -129,15 +125,7 @@ fun = do
     _ <- P.string "define"
     _ <- P.spaces
     name <- P.many1 $ P.letter P.<|> symchar
-    _ <- optspace
-    _ <- P.string "("
-    _ <- optspace
-    args <- commasep (P.many1 $ P.letter P.<|> symchar)
-    _ <- optspace
-    _ <- P.string ")"
-    _ <- optspace
-    body <- block
-    _ <- optspace
+    (args, body) <- headAndBlock (commasep (P.many1 $ P.letter P.<|> symchar))
     return $ BFun name args body
 
 
@@ -165,11 +153,11 @@ expr = P.try bool
 
 
 parser :: P.Parser [Value]
-parser = (P.sepBy expr (P.string " " P.<|> P.string "\t"))
+parser = P.sepBy expr (P.string " " P.<|> P.string "\t")
 
 
 outerparser :: P.Parser [Value]
-outerparser = (P.sepBy expr P.spaces)
+outerparser = P.sepBy expr P.spaces
 
 
 parse :: String -> [Value]

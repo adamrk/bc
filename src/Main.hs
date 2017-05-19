@@ -12,7 +12,5 @@ import BC.State
 main :: IO ()
 main = do
     tty <- queryTerminal stdInput
-    if tty
-      then startPrompt
-      else getContents >>= putStrLn . show . evalOne . parse
+    if tty then startPrompt else getContents >>= print . evalOne . parse
   where evalOne inp = let (val, _) = eval newState inp in val

@@ -54,7 +54,7 @@ instance Floating Number where
     (BInt x) ** (BFloat y) = BFloat $ fromIntegral x ** y
     (BInt x) ** (BInt y) = BInt $ x ^ y
     logBase x y =  log y / log x
-    sqrt x = x ** (BFloat 0.5)
+    sqrt x = x ** BFloat 0.5
     tan  x = sin x / cos x
     tanh x =  sinh x / cosh x
 
@@ -71,7 +71,7 @@ instance Num Number where
   abs (BFloat x) = BFloat $ abs x
   signum (BInt x) = BInt $ signum x
   signum (BFloat x) = BFloat $ signum x
-  fromInteger x = BInt x
+  fromInteger = BInt
   negate (BInt x) = BInt $ negate x
   negate (BFloat x) = BFloat $ negate x
 
@@ -100,7 +100,7 @@ precedence "!=" = 2
 
 contains :: Eq a => [a] -> a -> Bool
 contains [] _ = False
-contains (x:xy) y = if x == y then True else contains xy y
+contains (x:xy) y = (x == y) || contains xy y
 
 
 operators = ["<=", ">=", "==", "!=", "<", ">", "||", "&&", "^", "*", "/", "-", "+", "%"]

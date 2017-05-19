@@ -1,5 +1,6 @@
 module BC.Prompt (startPrompt) where
 
+import Control.Monad (unless)
 import Data.Char
 import System.IO
 import System.Posix.Signals
@@ -9,6 +10,10 @@ import BC.Eval
 import BC.Parse
 import BC.State
 import BC.Types
+
+
+data Prompt = PState Int [String]
+
 
 printHeader :: IO ()
 printHeader = do
@@ -20,10 +25,10 @@ printHeader = do
 output :: State -> String -> IO State
 output state out =
     let res = parse out
-    in if length res == 1 && isErr (res !! 0)
+    in if length res == 1 && isErr (head res)
       then do
-        putStrLn $ show (res !! 0)
-        return $ state
+        print (head res)
+        return state
       else
         let (ret, newstate) = eval state res
         in do putStrLn $ returnStr ++ show ret
@@ -33,21 +38,17 @@ output state out =
 printStatus :: State -> String -> IO ()
 printStatus state str =
     let res = parse str
-    in if length res == 1 && isErr (res !! 0)
-      then return ()
-      else
+    in unless (length res == 1 && isErr (head res)) $
         let (evald, _) = eval state res
             out = show evald
-        in if isErr evald || length out == 0
-          then return ()
-          else let str = " \x1b[33m=> " ++ trunc out ++ "\x1b[0m"
-               in putStr (str ++ repeat '\b' (length str - 9))
-  where repeat str 0 = ""
-        repeat str n = (str:repeat str (n-1))
-        trunc s =
+        in unless (isErr evald || null out) $
+          let str = " \x1b[33m=> " ++ trunc out ++ "\x1b[0m"
+          in do putStr str
+                moveCursor (length str - 9)
+  where trunc s =
           let tr = truncLen s
           in if contains tr '\n'
-              then takeWhile (\x -> x /= '\n') tr ++ "..."
+              then takeWhile (/= '\n') tr ++ "..."
               else tr
         truncLen s = if length s > 20 then take 20 s ++ "..." else s
 
@@ -56,53 +57,84 @@ cleanPrompt :: IO ()
 cleanPrompt = putStr "\x1b[2K\r"
 
 
+moveCursor :: Int -> IO ()
+moveCursor n = putStr (repeatB n)
+  where repeatB 0 = ""
+        repeatB n = '\b':repeatB (n-1)
+
+
 -- TODO: Stub
-readSpecialKey :: IO ()
-readSpecialKey = do
+readSpecialKey :: Int -> String -> Prompt -> IO (Int, String, Prompt)
+readSpecialKey pos acc pstate@(PState hpos history) = do
     c <- getChar
     c2 <- getChar
-    return ()
+    if c == '['
+      then
+        case c2 of
+          'A' ->
+            if hpos < (length history - 1)
+              then
+                let nacc = history !! (hpos+1)
+                in return (length nacc, nacc, PState (hpos+1) history)
+              else return (pos, acc, pstate)
+          'B' ->
+            if hpos > -1
+              then if hpos == 0
+                then return (0, "", PState (-1) history)
+                else
+                  let nacc = history !! (hpos-1)
+                  in return (length nacc, nacc, PState (hpos-1) history)
+              else return (pos, acc, pstate)
+          'C' -> return (pos+1, acc, pstate)
+          'D' -> return (pos-1, acc, pstate)
+          _   -> return (pos, acc, pstate)
+      else return (pos, acc, pstate)
 
 
-readline :: State -> IO (Maybe String)
-readline state = read' ""
-  where read' acc = do
+readline :: State -> Prompt -> IO (Maybe String)
+readline state = read' "" 0
+  where read' acc pos pstate = do
           cleanPrompt
           putStr promptStr
           putStr acc
           printStatus state acc
+          moveCursor (length acc - pos)
           c <- getChar
           case c of
             '\EOT' -> return Nothing
-            '\n' -> return (Just acc)
+            '\n'   -> return (Just acc)
             '\DEL' ->
-              if length acc > 0
-              then do
-                putStr "\b \b"
-                read' (init acc)
+              if null acc || pos == 0
+              then read' acc pos pstate
               else do
-                read' acc
+                putStr "\b \b"
+                read' (take (pos-1) acc ++ drop pos acc) (pos-1) pstate
             '\x1b' -> do
-              readSpecialKey
-              read' acc
-            c    ->
+              (pos, nacc, newpstate) <- readSpecialKey pos acc pstate
+              read' nacc (clamp pos 0 (length acc)) newpstate
+            c      ->
               if isPrint c
                 then do
                   putStr [c]
-                  read' (acc ++ [c])
-                else read' acc
+                  read' (acc ++ [c]) (pos+1) pstate
+                else read' acc pos pstate
+        clamp n min max
+            | n < min = min
+            | n > max = max
+            | otherwise = n
 
 
-prompt :: State -> IO ()
-prompt state = do
-    input <- readline state
+prompt :: State -> Prompt -> IO ()
+prompt state pstate@(PState _ history) = do
+    input <- readline state pstate
     case input of
       Nothing -> putStrLn "\nBye!"
       Just "quit" -> putStrLn "\nBye!"
       Just str -> do
         putStrLn ""
         newstate <- output state str
-        prompt newstate
+        let newpstate = PState (-1) (str:history)
+        prompt newstate newpstate
 
 
 installHandlers :: IO ()
@@ -117,4 +149,4 @@ startPrompt :: IO ()
 startPrompt = do
     printHeader
     installHandlers
-    prompt newState
+    prompt newState (PState (-1) [])
