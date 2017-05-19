@@ -2,6 +2,8 @@ module BC.Prompt (startPrompt) where
 
 import Control.Monad (unless)
 import Data.Char
+import Data.List
+import System.Directory (doesFileExist, getHomeDirectory)
 import System.IO
 import System.Posix.Signals
 
@@ -13,6 +15,28 @@ import BC.Types
 
 
 data Prompt = PState Int [String]
+
+
+newPrompt :: IO Prompt
+newPrompt = do
+    home <- getHomeDirectory
+    let f = home ++ "/" ++ historyFile
+    exists <- doesFileExist f
+    if exists
+      then do
+        contents <- readFile f
+        return $ PState (-1) (split contents)
+      else return $ PState (-1) []
+  where split [] = []
+        split s = takeWhile (/= '\n') s : split (dropWhile (/= '\n') s)
+
+
+savePrompt :: Prompt -> IO ()
+savePrompt (PState _ strs) = do
+    home <- getHomeDirectory
+    f <- openFile (home ++ "/" ++ historyFile) WriteMode
+    hPrint f (intercalate "\n" strs)
+    hClose f
 
 
 printHeader :: IO ()
@@ -124,12 +148,16 @@ readline state = read' "" 0
             | otherwise = n
 
 
-prompt :: State -> Prompt -> IO ()
+prompt :: State -> Prompt -> IO Prompt
 prompt state pstate@(PState _ history) = do
     input <- readline state pstate
     case input of
-      Nothing -> putStrLn "\nBye!"
-      Just "quit" -> putStrLn "\nBye!"
+      Nothing -> do
+        putStrLn "\nBye!"
+        return pstate
+      Just "quit" -> do
+        putStrLn "\nBye!"
+        return pstate
       Just str -> do
         putStrLn ""
         newstate <- output state str
@@ -149,4 +177,6 @@ startPrompt :: IO ()
 startPrompt = do
     printHeader
     installHandlers
-    prompt newState (PState (-1) [])
+    p <- newPrompt
+    state <- prompt newState p
+    savePrompt state
