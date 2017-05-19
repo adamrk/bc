@@ -63,14 +63,18 @@ symbol = do
       else return $ BSym res
 
 
-block :: P.Parser [Value]
+block :: P.Parser [[Value]]
 block = do
     _ <- P.string "{"
     _ <- optspace
-    body <- P.sepBy expr P.spaces
+    body <- P.sepBy parser newline
     _ <- optspace
     _ <- P.string "}"
     return $ body
+  where newline = do
+          _ <- P.many (P.string " " P.<|> P.string "\t")
+          _ <- P.string "\n"
+          P.many (P.string " " P.<|> P.string "\t")
 
 
 -- I obviously can't parsec
@@ -80,7 +84,7 @@ parseIf = do
     _ <- optspace
     _ <- P.string "("
     _ <- optspace
-    cond <- P.sepBy expr P.spaces
+    cond <- parser
     _ <- optspace
     _ <- P.string ")"
     _ <- optspace
@@ -101,7 +105,7 @@ while = do
     _ <- optspace
     _ <- P.string "("
     _ <- optspace
-    cond <- P.sepBy expr P.spaces
+    cond <- parser
     _ <- optspace
     _ <- P.string ")"
     _ <- optspace
@@ -116,7 +120,7 @@ def = do
     _ <- P.spaces
     _ <- P.string "="
     _ <- optspace
-    expr <- P.sepBy expr P.spaces
+    expr <- parser
     return $ BDef sym expr
 
 
@@ -161,10 +165,15 @@ expr = P.try bool
 
 
 parser :: P.Parser [Value]
-parser = (P.sepBy expr P.spaces)
+parser = (P.sepBy expr (P.string " " P.<|> P.string "\t"))
+
+
+outerparser :: P.Parser [Value]
+outerparser = (P.sepBy expr P.spaces)
+
 
 parse :: String -> [Value]
-parse input = case P.parse (parser <* P.eof) (trim input) (trim input) of
+parse input = case P.parse (outerparser <* P.eof) (trim input) (trim input) of
     Left err  -> [BErr $ show err]
     Right val -> val
   where trim s = trimR "" $ dropWhile isSpace s

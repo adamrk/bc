@@ -5,10 +5,10 @@ import Data.List (intercalate)
 data Value = BNum Number
            | BBool Bool
            | BSym String
-           | BIf [Value] [Value] (Maybe [Value])
-           | BWhile [Value] [Value]
+           | BIf [Value] [[Value]] (Maybe [[Value]])
+           | BWhile [Value] [[Value]]
            | BDef Value [Value]
-           | BFun String [String] [Value]
+           | BFun String [String] [[Value]]
            | BCall Value [[Value]]
            | BErr String
 instance Show Value where
@@ -63,7 +63,7 @@ instance Num Number where
   (BFloat x) + (BFloat y) = BFloat $ x + y
   (BInt x) + (BFloat y) = BFloat $ fromIntegral x + y
   (BFloat x) + (BInt y) = BFloat $ x + fromIntegral y
-  (BInt x) * (BInt y) = BInt $ x + y
+  (BInt x) * (BInt y) = BInt $ x * y
   (BFloat x) * (BFloat y) = BFloat $ x * y
   (BInt x) * (BFloat y) = BFloat $ fromIntegral x * y
   (BFloat x) * (BInt y) = BFloat $ x * fromIntegral y

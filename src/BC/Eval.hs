@@ -11,6 +11,13 @@ truthy (BBool x) = x
 truthy _ = False
 
 
+evalAll :: State -> [[Value]] -> (Value, State)
+evalAll state [x] = eval state x
+evalAll state (x:xs) =
+  let (_, nstate) = eval state x
+  in evalAll nstate xs
+
+
 eval :: State -> [Value] -> (Value, State)
 eval state [x@(BNum _)] = (x, state)
 eval state [(BDef (BSym sym) expr)] =
@@ -24,7 +31,7 @@ eval state [x@(BWhile cond body)] =
     in
       if truthy evald
         then let
-          (bodyval, newstate) = eval whilestate body
+          (bodyval, newstate) = evalAll whilestate body
           (val, retstate) = eval newstate [x]
           in if truthy val then (val, retstate) else (bodyval, retstate)
         else (BBool False, whilestate)
@@ -32,9 +39,9 @@ eval state [(BIf cond body alt)] =
     let (evald, ifstate) = eval state cond
     in
       if truthy evald
-        then eval ifstate body
+        then evalAll ifstate body
         else case alt of
-              Just vals -> eval ifstate vals
+              Just vals -> evalAll ifstate vals
               Nothing -> (BBool False, ifstate)
 eval state [(BSym x)] =
     case M.lookup x state of
@@ -72,6 +79,9 @@ treeEval state (x@(BSym sym):xy) [] nums =
         if isOp sym
           then treeEval state xy [x] nums
           else BErr (sym ++ " is undefined")
+treeEval state (x:xy) ops vals =
+    let (val, nstate) = eval state [x]
+    in treeEval nstate xy ops (val:vals)
 
 
 handleOp :: State -> [Value] -> [Value] -> [Value] -> Value
@@ -112,7 +122,7 @@ funCall state (BFun name args body) provided =
     if length args == length provided
       then let
         nstate = callWith state args provided
-        (val, _) = eval nstate body
+        (val, _) = evalAll nstate body
         in (val, state)
       else
         (BErr ("Expected " ++ show (length args) ++
