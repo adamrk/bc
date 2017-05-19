@@ -50,6 +50,16 @@ symbol = do
     return $ BSym res
 
 
+block :: P.Parser [Value]
+block = do
+    _ <- P.string "{"
+    _ <- P.optionMaybe P.spaces
+    body <- P.sepBy expr P.spaces
+    _ <- P.optionMaybe P.spaces
+    _ <- P.string "}"
+    return $ body
+
+
 -- I obviously can't parsec
 parseIf :: P.Parser Value
 parseIf = do
@@ -61,23 +71,30 @@ parseIf = do
     _ <- P.optionMaybe P.spaces
     _ <- P.string ")"
     _ <- P.optionMaybe P.spaces
-    _ <- P.string "{"
-    _ <- P.optionMaybe P.spaces
-    body <- P.sepBy expr P.spaces
-    _ <- P.optionMaybe P.spaces
-    _ <- P.string "}"
+    body <- block
     _ <- P.optionMaybe P.spaces
     alt <- P.optionMaybe (P.string "else")
     case alt of
       Just _ -> do
         _ <- P.optionMaybe P.spaces
-        _ <- P.string "{"
-        _ <- P.optionMaybe P.spaces
-        altbody <- P.sepBy expr P.spaces
-        _ <- P.optionMaybe P.spaces
-        _ <- P.string "}"
+        altbody <- block
         return $ BIf cond body (Just altbody)
       Nothing -> return $ BIf cond body Nothing
+
+
+while :: P.Parser Value
+while = do
+    _ <- P.string "while"
+    _ <- P.optionMaybe P.spaces
+    _ <- P.string "("
+    _ <- P.optionMaybe P.spaces
+    cond <- P.sepBy expr P.spaces
+    _ <- P.optionMaybe P.spaces
+    _ <- P.string ")"
+    _ <- P.optionMaybe P.spaces
+    body <- block
+    _ <- P.optionMaybe P.spaces
+    return $ BWhile cond body
 
 
 def :: P.Parser Value
@@ -93,6 +110,7 @@ def = do
 expr :: P.Parser Value
 expr = P.try bool
  P.<|> P.try def
+ P.<|> P.try while
  P.<|> P.try parseIf
  P.<|> P.try number
  P.<|> symbol

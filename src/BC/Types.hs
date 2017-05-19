@@ -6,18 +6,22 @@ data Value = BNum Number
            | BBool Bool
            | BSym String
            | BIf [Value] [Value] (Maybe [Value])
+           | BWhile [Value] [Value]
            | BDef Value [Value]
            | BErr String
 instance Show Value where
   show (BBool b) = if b then "true" else "false"
   show (BDef sym expr) = show sym ++ " = " ++ unwords (map show expr)
-  show (BIf x y z) =
-    "if (" ++ unwords (map show x) ++ ") {\n\t" ++
-    intercalate "\n\t" (map show y) ++ "\n}" ++
-      (case z of
+  show (BIf cond body alt) =
+    "if (" ++ unwords (map show cond) ++ ") {\n\t" ++
+    intercalate "\n\t" (map show body) ++ "\n}" ++
+      (case alt of
         Just vals ->
           " else {\n\t" ++ intercalate "\n\t" (map show vals) ++ "\n}"
         Nothing -> "")
+  show (BWhile cond body) =
+    "while (" ++ unwords (map show cond) ++ ") {\n\t" ++
+    intercalate "\n\t" (map show body) ++ "\n}"
   show (BSym  o) = o
   show (BNum n) = show n
   show (BErr e) = "error: " ++ e

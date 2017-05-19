@@ -18,6 +18,15 @@ eval state [(BDef (BSym sym) expr)] =
     in (val, M.insert sym val newstate)
 eval state [x@(BBool _)] = (x, state)
 eval state [x@(BErr _)] = (x, state)
+eval state [x@(BWhile cond body)] =
+    let (evald, whilestate) = eval state cond
+    in
+      if truthy evald
+        then let
+          (bodyval, newstate) = eval whilestate body
+          (val, retstate) = eval newstate [x]
+          in if truthy val then (val, retstate) else (bodyval, retstate)
+        else (BBool False, whilestate)
 eval state [(BIf cond body alt)] =
     let (evald, ifstate) = eval state cond
     in
