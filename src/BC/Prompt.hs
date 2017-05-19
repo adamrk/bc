@@ -140,7 +140,7 @@ readline state = read' "" 0
               if isPrint c
                 then do
                   putStr [c]
-                  read' (acc ++ [c]) (pos+1) pstate
+                  read' (take pos acc ++ [c] ++ drop pos acc) (pos+1) pstate
                 else read' acc pos pstate
         clamp n min max
             | n < min = min
