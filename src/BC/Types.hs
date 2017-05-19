@@ -8,20 +8,27 @@ data Value = BNum Number
            | BIf [Value] [Value] (Maybe [Value])
            | BWhile [Value] [Value]
            | BDef Value [Value]
+           | BFun String [String] [Value]
+           | BCall Value [[Value]]
            | BErr String
 instance Show Value where
   show (BBool b) = if b then "true" else "false"
   show (BDef sym expr) = show sym ++ " = " ++ unwords (map show expr)
   show (BIf cond body alt) =
-    "if (" ++ unwords (map show cond) ++ ") {\n\t" ++
-    intercalate "\n\t" (map show body) ++ "\n}" ++
+    "if (" ++ unwords (map show cond) ++ ") {\n  " ++
+    unwords (map show body) ++ "\n}" ++
       (case alt of
         Just vals ->
-          " else {\n\t" ++ intercalate "\n\t" (map show vals) ++ "\n}"
+          " else {\n  " ++ unwords (map show vals) ++ "\n}"
         Nothing -> "")
   show (BWhile cond body) =
-    "while (" ++ unwords (map show cond) ++ ") {\n\t" ++
-    intercalate "\n\t" (map show body) ++ "\n}"
+    "while (" ++ unwords (map show cond) ++ ") {\n  " ++
+    unwords (map show body) ++ "\n}"
+  show (BFun name args body) =
+    "define " ++ name ++ "(" ++ intercalate ", " args ++ ") {\n  " ++
+    unwords (map show body) ++ "\n}"
+  show (BCall name args) =
+    show name ++ "(" ++ intercalate ", " (map show args) ++ ")"
   show (BSym  o) = o
   show (BNum n) = show n
   show (BErr e) = "error: " ++ e

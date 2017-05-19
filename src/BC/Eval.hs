@@ -16,6 +16,7 @@ eval state [x@(BNum _)] = (x, state)
 eval state [(BDef (BSym sym) expr)] =
     let (val, newstate) = eval state expr
     in (val, M.insert sym val newstate)
+eval state [x@(BFun sym _ _)] = (BBool True, M.insert sym x state)
 eval state [x@(BBool _)] = (x, state)
 eval state [x@(BErr _)] = (x, state)
 eval state [x@(BWhile cond body)] =
@@ -39,6 +40,11 @@ eval state [(BSym x)] =
     case M.lookup x state of
       Just val -> (val, state)
       Nothing  -> (BErr (x ++ " is undefined"), state)
+eval state [(BCall (BSym name) args)] =
+    case M.lookup name state of
+      Just val@(BFun _ _ _) -> funCall state val args
+      Nothing -> (BErr ("function " ++ name ++ " is undefined"), state)
+      _ -> (BErr (name ++ " is not a function"), state)
 eval state [] = (BSym "", state)
 eval state l = (treeEval state l [] [], state)
 
@@ -96,3 +102,21 @@ binOp (BSym "+") = Just (+)
 binOp (BSym "-") = Just ( - )
 binOp (BSym "^") = Just (**)
 binOp _ = Nothing
+
+
+funCall :: State -> Value -> [[Value]] -> (Value, State)
+funCall state (BFun name args body) provided =
+    if length args == length provided
+      then let
+        nstate = callWith state args provided
+        (val, _) = eval nstate body
+        in (val, state)
+      else
+        (BErr ("Expected " ++ show (length args) ++
+               " arguments in call to function " ++ name ++ ", got " ++
+               show (length provided)),
+         state)
+  where callWith state [] _ = state
+        callWith state (a:args) (p:provided) =
+          let (evald, nstate) = eval state p
+          in callWith (M.insert a evald nstate) args provided

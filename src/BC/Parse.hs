@@ -6,12 +6,26 @@ import qualified Text.ParserCombinators.Parsec as P
 
 import BC.Types
 
+keywords = ["define", "if", "else", "while"]
+
+
+optspace :: P.Parser (Maybe ())
+optspace = P.optionMaybe P.spaces
+
+
 symchar :: P.Parser Char
 symchar = P.oneOf "!%&|*+-/<=>^~"
 
 
 number :: P.Parser Value
 number = P.try float P.<|> integer
+
+
+commasep parser = P.sepBy parser sep
+  where sep = do _ <- optspace
+                 str <- P.string ","
+                 _ <- optspace
+                 return $ str
 
 
 float :: P.Parser Value
@@ -47,15 +61,19 @@ bool = P.try parseTrue P.<|> parseFalse
 symbol :: P.Parser Value
 symbol = do
     res <- P.many1 $ P.letter P.<|> symchar
-    return $ BSym res
+    if contains keywords res
+      then P.unexpected res
+      else return $ BSym res
+  where contains [] _ = False
+        contains (x:xy) y = if x == y then True else contains xy y
 
 
 block :: P.Parser [Value]
 block = do
     _ <- P.string "{"
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     body <- P.sepBy expr P.spaces
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     _ <- P.string "}"
     return $ body
 
@@ -64,19 +82,19 @@ block = do
 parseIf :: P.Parser Value
 parseIf = do
     _ <- P.string "if"
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     _ <- P.string "("
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     cond <- P.sepBy expr P.spaces
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     _ <- P.string ")"
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     body <- block
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     alt <- P.optionMaybe (P.string "else")
     case alt of
       Just _ -> do
-        _ <- P.optionMaybe P.spaces
+        _ <- optspace
         altbody <- block
         return $ BIf cond body (Just altbody)
       Nothing -> return $ BIf cond body Nothing
@@ -85,15 +103,15 @@ parseIf = do
 while :: P.Parser Value
 while = do
     _ <- P.string "while"
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     _ <- P.string "("
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     cond <- P.sepBy expr P.spaces
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     _ <- P.string ")"
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     body <- block
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     return $ BWhile cond body
 
 
@@ -102,9 +120,38 @@ def = do
     sym <- symbol
     _ <- P.spaces
     _ <- P.string "="
-    _ <- P.optionMaybe P.spaces
+    _ <- optspace
     expr <- P.sepBy expr P.spaces
     return $ BDef sym expr
+
+
+fun :: P.Parser Value
+fun = do
+    _ <- P.string "define"
+    _ <- P.spaces
+    name <- P.many1 $ P.letter P.<|> symchar
+    _ <- optspace
+    _ <- P.string "("
+    _ <- optspace
+    args <- commasep (P.many1 $ P.letter P.<|> symchar)
+    _ <- optspace
+    _ <- P.string ")"
+    _ <- optspace
+    body <- block
+    _ <- optspace
+    return $ BFun name args body
+
+
+call :: P.Parser Value
+call = do
+    name <- symbol
+    _ <- P.string "("
+    _ <- optspace
+    args <- commasep parser
+    _ <- optspace
+    _ <- P.string ")"
+    return $ BCall name args
+
 
 
 expr :: P.Parser Value
@@ -112,15 +159,17 @@ expr = P.try bool
  P.<|> P.try def
  P.<|> P.try while
  P.<|> P.try parseIf
+ P.<|> P.try fun
+ P.<|> P.try call
  P.<|> P.try number
  P.<|> symbol
 
 
 parser :: P.Parser [Value]
-parser = (P.sepBy expr P.spaces) <* P.eof
+parser = (P.sepBy expr P.spaces)
 
 parse :: String -> [Value]
-parse input = case P.parse parser (trim input) (trim input) of
+parse input = case P.parse (parser <* P.eof) (trim input) (trim input) of
     Left err  -> [BErr $ show err]
     Right val -> val
   where trim s = trimR "" $ dropWhile isSpace s
