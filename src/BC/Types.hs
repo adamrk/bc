@@ -81,19 +81,35 @@ isErr (BErr _) = True
 isErr _        = False
 
 
-precedence :: Value -> Int
-precedence (BSym "^") = 5
-precedence (BSym "*") = 4
-precedence (BSym "/") = 4
-precedence (BSym "-") = 3
-precedence (BSym "+") = 3
-precedence (BSym "%") = 4
-precedence (BSym "||") = 1
-precedence (BSym "&&") = 1
-precedence (BSym "<") = 2
-precedence (BSym ">") = 2
-precedence (BSym "<=") = 2
-precedence (BSym ">=") = 2
-precedence (BSym "==") = 2
-precedence (BSym "!=") = 2
-precedence _         = 0
+precedence :: String -> Int
+precedence "^" = 5
+precedence "*" = 4
+precedence "/" = 4
+precedence "-" = 3
+precedence "+" = 3
+precedence "%" = 4
+precedence "||" = 1
+precedence "&&" = 1
+precedence "<" = 2
+precedence ">" = 2
+precedence "<=" = 2
+precedence ">=" = 2
+precedence "==" = 2
+precedence "!=" = 2
+
+
+contains :: Eq a => [a] -> a -> Bool
+contains [] _ = False
+contains (x:xy) y = if x == y then True else contains xy y
+
+
+operators = ["<=", ">=", "==", "!=", "<", ">", "||", "&&", "^", "*", "/", "-", "+", "%"]
+
+
+isOp = contains operators
+
+
+keywords = ["define", "if", "else", "while"]
+
+
+isKeyword = contains keywords

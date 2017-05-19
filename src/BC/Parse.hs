@@ -6,9 +6,6 @@ import qualified Text.ParserCombinators.Parsec as P
 
 import BC.Types
 
-keywords = ["define", "if", "else", "while"]
-
-
 optspace :: P.Parser (Maybe ())
 optspace = P.optionMaybe P.spaces
 
@@ -61,11 +58,9 @@ bool = P.try parseTrue P.<|> parseFalse
 symbol :: P.Parser Value
 symbol = do
     res <- P.many1 $ P.letter P.<|> symchar
-    if contains keywords res
+    if isKeyword res
       then P.unexpected res
       else return $ BSym res
-  where contains [] _ = False
-        contains (x:xy) y = if x == y then True else contains xy y
 
 
 block :: P.Parser [Value]

@@ -44,11 +44,9 @@ printStatus state str =
                in putStr (str ++ repeat '\b' (length str - 9))
   where repeat str 0 = ""
         repeat str n = (str:repeat str (n-1))
-        contains c [] = False
-        contains c (s:xs) = if c == s then True else contains c xs
         trunc s =
           let tr = truncLen s
-          in if contains '\n' tr
+          in if contains tr '\n'
               then takeWhile (\x -> x /= '\n') tr ++ "..."
               else tr
         truncLen s = if length s > 20 then take 20 s ++ "..." else s

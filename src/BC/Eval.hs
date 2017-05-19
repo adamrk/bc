@@ -58,23 +58,26 @@ treeEval state (x@(BIf _ _ _):xy) ops nums =
 treeEval state (x@(BNum _):xy) ops nums = treeEval state xy ops (x:nums)
 treeEval state ((BBool x):xy) ops nums =
     treeEval state xy ops ((BNum $ BInt $ if x then 1 else 0):nums)
-treeEval state expr@(x@(BSym sym):xy) ops@(op:_) nums =
+treeEval state expr@(x@(BSym sym):xy) ops@((BSym op):_) nums =
     case M.lookup sym state of
       Just val -> treeEval state xy ops (val:nums)
       Nothing  ->
-        if precedence x > precedence op
+        if precedence sym > precedence op
           then treeEval state xy (x:ops) nums
           else handleOp state expr ops nums
 treeEval state (x@(BSym sym):xy) [] nums =
     case M.lookup sym state of
       Just val -> treeEval state xy [] (val:nums)
-      Nothing  -> treeEval state xy [x] nums
+      Nothing  ->
+        if isOp sym
+          then treeEval state xy [x] nums
+          else BErr (sym ++ " is undefined")
 
 
 handleOp :: State -> [Value] -> [Value] -> [Value] -> Value
-handleOp state expr (op:ops) ((BNum op2):((BNum op1):nums)) =
+handleOp state expr ((BSym op):ops) ((BNum op2):((BNum op1):nums)) =
     treeEval state expr ops (((findOp op) op1 op2):nums)
-handleOp _ expr ((BSym op):ops) _ = BErr ("Not enough arguments to operation " ++ op)
+handleOp _ expr ((BSym op):ops) x = BErr ("Not enough arguments to operation " ++ op)
 
 
 findOp x = case binOp x of
@@ -85,22 +88,22 @@ findOp x = case binOp x of
                 Nothing -> \a -> \b -> (BNum $ BInt 0)
 
 
-logicalOp :: Value -> Maybe (Number -> Number -> Bool)
-logicalOp (BSym ">") = Just (>)
-logicalOp (BSym "<") = Just (<)
-logicalOp (BSym ">=") = Just (>=)
-logicalOp (BSym "<=") = Just (<=)
-logicalOp (BSym "==") = Just (==)
-logicalOp (BSym "!=") = Just (/=)
+logicalOp :: String -> Maybe (Number -> Number -> Bool)
+logicalOp ">" = Just (>)
+logicalOp "<" = Just (<)
+logicalOp ">=" = Just (>=)
+logicalOp "<=" = Just (<=)
+logicalOp "==" = Just (==)
+logicalOp "!=" = Just (/=)
 logicalOp _ = Nothing
 
 
-binOp :: Value -> Maybe (Number -> Number -> Number)
-binOp (BSym "*") = Just (*)
-binOp (BSym "/") = Just (/)
-binOp (BSym "+") = Just (+)
-binOp (BSym "-") = Just ( - )
-binOp (BSym "^") = Just (**)
+binOp :: String -> Maybe (Number -> Number -> Number)
+binOp "*" = Just (*)
+binOp "/" = Just (/)
+binOp "+" = Just (+)
+binOp "-" = Just ( - )
+binOp "^" = Just (**)
 binOp _ = Nothing
 
 
