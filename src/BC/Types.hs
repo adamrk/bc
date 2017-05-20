@@ -1,6 +1,7 @@
 module BC.Types where
 
 import Data.List (intercalate)
+import Data.Number.BigFloat
 
 data Value = BNum Number
            | BBool Bool
@@ -36,7 +37,7 @@ instance Show Value where
 
 -- sorry, this is a little hacky
 data Number = BInt Integer
-            | BFloat Double
+            | BFloat (BigFloat (PrecPlus20 (PrecPlus20 Prec50)))
   deriving (Ord, Eq)
 instance Show Number where
   show (BInt i) = show i

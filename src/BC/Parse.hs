@@ -32,8 +32,10 @@ float = do
     _ <- P.string "."
     y <- P.many1 P.digit
     case neg of
-      Just "-" -> (return . BNum . BFloat . read) ("-" ++ x ++ "." ++ y)
-      _        -> (return . BNum . BFloat . read) (x ++ "." ++ y)
+      Just "-" -> return $ construct ("-" ++ x ++ "." ++ y)
+      _        -> return $ construct (x ++ "." ++ y)
+        -- do a little dance
+  where construct str = BNum $ BFloat $ fromRational $ realToFrac $ (read str::Double)
 
 
 integer :: P.Parser Value
