@@ -7,3 +7,5 @@ promptStr = "> "
 returnStr = "=> "
 
 historyFile = ".bc_history"
+
+historyLen = 1000::Int

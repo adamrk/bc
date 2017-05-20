@@ -7,6 +7,8 @@ import System.Directory (doesFileExist, getHomeDirectory)
 import System.IO
 import System.Posix.Signals
 
+import qualified System.IO.Strict as S
+
 import BC.Config
 import BC.Eval
 import BC.Parse
@@ -24,19 +26,16 @@ newPrompt = do
     exists <- doesFileExist f
     if exists
       then do
-        contents <- readFile f
-        return $ PState (-1) (split contents)
+        contents <- S.readFile f
+        let s = lines contents
+        length s `seq` return $ PState (-1) s
       else return $ PState (-1) []
-  where split [] = []
-        split s = takeWhile (/= '\n') s : split (dropWhile (/= '\n') s)
 
 
 savePrompt :: Prompt -> IO ()
 savePrompt (PState _ strs) = do
     home <- getHomeDirectory
-    f <- openFile (home ++ "/" ++ historyFile) WriteMode
-    hPrint f (intercalate "\n" strs)
-    hClose f
+    writeFile (home ++ "/" ++ historyFile) (intercalate "\n" $ reverse strs)
 
 
 printHeader :: IO ()
@@ -126,7 +125,8 @@ readline state = read' "" 0
           c <- getChar
           case c of
             '\EOT' -> return Nothing
-            '\n'   -> return (Just acc)
+            '\n'   -> do putStrLn ""
+                         return (Just acc)
             '\DEL' ->
               if null acc || pos == 0
               then read' acc pos pstate
@@ -152,14 +152,9 @@ prompt :: State -> Prompt -> IO Prompt
 prompt state pstate@(PState _ history) = do
     input <- readline state pstate
     case input of
-      Nothing -> do
-        putStrLn "\nBye!"
-        return pstate
-      Just "quit" -> do
-        putStrLn "\nBye!"
-        return pstate
+      Nothing -> return pstate
+      Just "quit" -> return pstate
       Just str -> do
-        putStrLn ""
         newstate <- output state str
         let newpstate = PState (-1) (str:history)
         prompt newstate newpstate
@@ -180,3 +175,4 @@ startPrompt = do
     p <- newPrompt
     state <- prompt newState p
     savePrompt state
+    putStrLn "Bye!"
