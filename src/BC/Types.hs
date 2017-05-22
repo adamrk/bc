@@ -10,6 +10,7 @@ data Value = BNum Number
            | BWhile [Value] [[Value]]
            | BDef Value [Value]
            | BFun String [String] [[Value]]
+           | BNative ([Value] -> Value)
            | BCall Value [[Value]]
            | BBraced [Value]
            | BErr String
