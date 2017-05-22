@@ -137,10 +137,10 @@ funCall state (BFun name args body) provided =
           in callWith (M.insert a evald nstate) args provided
 funCall state (BNative body) provided =
     let (args, nstate) = callWith state provided
-    in (body args, state)
+    in (body args, nstate)
 -- TODO: make tail recursive with accumulator
-  where callWith state [] = (state, [])
+  where callWith state [] = ([], state)
         callWith state (x:xs) =
           let (evald, nstate) = eval state x
-              (retstate, l) = callWith nstate xs
-          in (retstate, evald:l)
+              (l, retstate) = callWith nstate xs
+          in (evald:l, retstate)
