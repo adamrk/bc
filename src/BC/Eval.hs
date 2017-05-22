@@ -47,6 +47,7 @@ eval state [BSym x] =
     case M.lookup x state of
       Just val -> (val, state)
       Nothing  -> (BErr (x ++ " is undefined"), state)
+eval state [BBraced vals] = eval state vals
 eval state [BCall (BSym name) args] =
     case M.lookup name state of
       Just val@BFun{} -> funCall state val args
@@ -60,6 +61,9 @@ treeEval :: State -> [Value] -> [Value] -> [Value] -> Value
 treeEval _ [] [] (num:_) = num
 treeEval state [] ops nums = handleOp state [] ops nums
 treeEval state (x@(BNum _):xy) ops nums = treeEval state xy ops (x:nums)
+treeEval state (BBraced x:xy) ops nums =
+    let (res, nstate) = eval state x
+    in treeEval nstate (res:xy) ops nums
 treeEval state (BBool x:xy) ops nums =
     treeEval state xy ops ((BNum $ BInt $ if x then 1 else 0):nums)
 treeEval state expr@(x@(BSym sym):xy) ops@(BSym op:_) nums =

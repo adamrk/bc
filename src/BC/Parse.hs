@@ -131,6 +131,14 @@ fun = do
     return $ BFun name args body
 
 
+braces :: P.Parser Value
+braces = do
+       _ <- P.string "("
+       parsed <- outerparser
+       _ <- P.string ")"
+       return $ BBraced parsed
+
+
 call :: P.Parser Value
 call = do
     name <- symbol
@@ -149,6 +157,7 @@ expr = P.try bool
  P.<|> P.try while
  P.<|> P.try parseIf
  P.<|> P.try fun
+ P.<|> P.try braces
  P.<|> P.try call
  P.<|> P.try number
  P.<|> symbol

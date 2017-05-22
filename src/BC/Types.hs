@@ -11,6 +11,7 @@ data Value = BNum Number
            | BDef Value [Value]
            | BFun String [String] [[Value]]
            | BCall Value [[Value]]
+           | BBraced [Value]
            | BErr String
 instance Show Value where
   show (BBool b) = if b then "true" else "false"
