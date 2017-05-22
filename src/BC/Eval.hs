@@ -51,6 +51,7 @@ eval state [BBraced vals] = eval state vals
 eval state [BCall (BSym name) args] =
     case M.lookup name state of
       Just val@BFun{} -> funCall state val args
+      Just val@BNative{} -> funCall state val args
       Nothing -> (BErr ("function " ++ name ++ " is undefined"), state)
       _ -> (BErr (name ++ " is not a function"), state)
 eval state [] = (BSym "", state)
@@ -134,3 +135,7 @@ funCall state (BFun name args body) provided =
         callWith state (a:args) (p:provided) =
           let (evald, nstate) = eval state p
           in callWith (M.insert a evald nstate) args provided
+-- TODO: fix state forgetfulness
+funCall state (BNative body) provided =
+    let args = map (fst . (eval state)) provided
+    in (body args, state)

@@ -35,7 +35,7 @@ float = do
       Just "-" -> return $ construct ("-" ++ x ++ "." ++ y)
       _        -> return $ construct (x ++ "." ++ y)
         -- do a little dance
-  where construct str = BNum $ BFloat $ fromRational $ realToFrac $ (read str::Double)
+  where construct str = BNum $ BFloat $ fromRational $ realToFrac (read str::Double)
 
 
 integer :: P.Parser Value

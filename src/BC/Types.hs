@@ -35,6 +35,7 @@ instance Show Value where
   show (BSym  o) = o
   show (BNum n) = show n
   show (BErr e) = "error: " ++ e
+  show (BNative _) = "native"
 
 
 -- sorry, this is a little hacky
