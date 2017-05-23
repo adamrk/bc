@@ -11,11 +11,14 @@ The idea behind `bc` is to display partial results to the right of the
 cursor in yellow while we type. A little example can be found in the video
 above. Minor syntactic cleanups have been developed as well (e.g. no `local`
 keyword). We have infinite precision integers and 90 decimal mantissa precision
-floats.
+floats (similar to setting `scale` to 90).
+
+We support all builtin functions, but have no IO (no `print`).
 
 ## TODO
 
 - A good readline copy (haskeline is sadly out of the question for this project)
+  - Add keyboard shortcuts
 - Comment parsing
 - Closures that can modify the parent environment (but do away with the `local` keyword).
 - Better arbitrary precision floats

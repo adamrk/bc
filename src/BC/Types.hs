@@ -38,9 +38,12 @@ instance Show Value where
   show (BNative _) = "native"
 
 
+type BF = BigFloat (PrecPlus20 (PrecPlus20 Prec50))
+
+
 -- sorry, this is a little hacky
 data Number = BInt Integer
-            | BFloat (BigFloat (PrecPlus20 (PrecPlus20 Prec50)))
+            | BFloat BF
   deriving (Ord, Eq)
 instance Show Number where
   show (BInt i) = show i
