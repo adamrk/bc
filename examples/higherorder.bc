@@ -1,0 +1,3 @@
+define inc(x) { x + 1}
+define call(f, arg) { f(arg)}
+call(inc, 10)

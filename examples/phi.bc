@@ -1,0 +1,10 @@
+define phi(x) {
+    t = 0
+    s = x
+    b = x
+    q = x * x
+    i = 1
+    while (s != t) {s = (t = s) + (b = b * (q / (i = i + 2)))}
+    const = 0.5 * l(8 * a(1))
+    0.5 + s * e(-0.5 * q - const)}
+phi(1)

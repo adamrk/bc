@@ -88,7 +88,6 @@ headAndBlock parser = do
     _ <- P.string ")"
     _ <- optspace
     body <- block
-    _ <- optspace
     return (args, body)
 
 
