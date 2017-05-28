@@ -29,7 +29,6 @@ pmath f x = BErr $ "Expected exactly one argument, got " ++ (show $ length x)
 psqrt :: [Value] -> Value
 psqrt = pmath sqrt
 
-
 pcos :: [Value] -> Value
 pcos = pmath cos
 

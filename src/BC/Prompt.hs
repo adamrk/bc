@@ -86,7 +86,6 @@ moveCursor n = putStr (repeatB n)
         repeatB n = '\b':repeatB (n-1)
 
 
--- TODO: Stub
 readSpecialKey :: Int -> String -> Prompt -> IO (Int, String, Prompt)
 readSpecialKey pos acc pstate@(PState hpos history) = do
     c <- getChar
