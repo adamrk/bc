@@ -103,6 +103,7 @@ precedence "<=" = 2
 precedence ">=" = 2
 precedence "==" = 2
 precedence "!=" = 2
+precedence _ = 6
 
 
 contains :: Eq a => [a] -> a -> Bool
