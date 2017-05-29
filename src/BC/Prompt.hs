@@ -50,11 +50,13 @@ output state out =
     let res = parse out
     in if length res == 1 && isErr (head res)
       then do
+        cleanPrompt
         print (head res)
         return state
       else
         let (ret, newstate) = eval state res
-        in do putStrLn $ returnStr ++ show ret
+        in do cleanPrompt
+              putStrLn $ returnStr ++ show ret
               return newstate
 
 
@@ -74,6 +76,17 @@ printStatus state str =
               then takeWhile (/= '\n') tr ++ "..."
               else tr
         truncLen s = if length s > 20 then take 20 s ++ "..." else s
+
+
+printCompletions :: State -> String -> IO ()
+printCompletions state str =
+  let completions = "" -- TODO: get possible completions
+      toPrint = "\n\x1b[32m" -- color to green
+              ++ replicate (length promptStr) ' '
+              ++ completions
+              ++ "\x1b[0m\r\x1b[A" -- color to white, move to prev line
+  in do putStr toPrint
+        putStr $ concat $ replicate (length promptStr + length str) "\x1b[C"
 
 
 cleanPrompt :: IO ()
@@ -135,6 +148,9 @@ readline state = read' "" 0
             '\x1b' -> do
               (pos, nacc, newpstate) <- readSpecialKey pos acc pstate
               read' nacc (clamp pos 0 (length acc)) newpstate
+            '\t' -> do
+              printCompletions state acc
+              read' acc pos pstate
             c      ->
               if isPrint c
                 then do
