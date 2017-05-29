@@ -80,10 +80,14 @@ printStatus state str =
 
 printCompletions :: State -> String -> IO ()
 printCompletions state str =
-  let completions = "" -- TODO: get possible completions
+  let tokens = words str
+      completions = if tokens == []
+                    then []
+                    else getCompletions (last tokens) state
+      compString = intercalate "  " $ take 5 completions
       toPrint = "\n\x1b[32m" -- color to green
               ++ replicate (length promptStr) ' '
-              ++ completions
+              ++ compString
               ++ "\x1b[0m\r\x1b[A" -- color to white, move to prev line
   in do putStr toPrint
         putStr $ concat $ replicate (length promptStr + length str) "\x1b[C"
