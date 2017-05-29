@@ -78,19 +78,35 @@ printStatus state str =
         truncLen s = if length s > 20 then take 20 s ++ "..." else s
 
 
-printCompletions :: State -> String -> IO ()
-printCompletions state str =
-  let tokens = words str
+tabComplete :: String -> Int -> State -> IO (String, Int)
+tabComplete str pos state = 
+  let tokens = words $ take pos str
       completions = if tokens == []
                     then []
                     else getCompletions (last tokens) state
-      compString = intercalate "  " $ take 5 completions
-      toPrint = "\n\x1b[32m" -- color to green
+  in case completions of
+    cs@(_:_:_) -> do
+      printCompletions cs
+      putStr $ concat $ replicate (length promptStr + pos) "\x1b[C"
+      -- ^ shift cursor right to current position
+      return (str, pos)
+    x:_ -> let diff = drop (length $ last tokens) x
+           in  do
+             putStr diff
+             return (take pos str ++ diff ++ drop pos str, pos + length diff)
+    _ -> return (str, pos)
+
+
+printCompletions :: [String] -> IO ()
+printCompletions cs =
+  let compString = intercalate "  " $ take 5 cs -- only list 5 matches
+      toPrint = "\n"
+              ++ "\x1b[2K\r" -- clear completion line
+              ++ "\x1b[32m" -- color to green
               ++ replicate (length promptStr) ' '
               ++ compString
               ++ "\x1b[0m\r\x1b[A" -- color to white, move to prev line
-  in do putStr toPrint
-        putStr $ concat $ replicate (length promptStr + length str) "\x1b[C"
+  in putStr toPrint
 
 
 cleanPrompt :: IO ()
@@ -153,8 +169,8 @@ readline state = read' "" 0
               (pos, nacc, newpstate) <- readSpecialKey pos acc pstate
               read' nacc (clamp pos 0 (length acc)) newpstate
             '\t' -> do
-              printCompletions state acc
-              read' acc pos pstate
+              (newAcc, newPos) <- tabComplete acc pos state
+              read' newAcc newPos pstate
             c      ->
               if isPrint c
                 then do
